@@ -1,0 +1,11 @@
+{
+  "name": "@kovo-internal-testing/drill-canary",
+  "version": "0.1.0",
+  "description": "Kovo security-drill fixture with no functionality",
+  "license": "UNLICENSED",
+  "files": ["README.md", "variant.json"],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
