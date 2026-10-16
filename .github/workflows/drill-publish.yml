@@ -3,6 +3,22 @@ name: Drill publish
 on:
   workflow_dispatch:
     inputs:
+      fixture:
+        description: Explicit fixture; existing publisher remains the default
+        required: true
+        default: drill-canary
+        type: choice
+        options:
+          - drill-canary
+          - u7-canary
+      operation:
+        description: Publish or deprecate only the D-258 U7 versions
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - deprecate
       version:
         description: Fixed drill version to publish
         required: true
@@ -13,6 +29,11 @@ on:
           - '0.1.2'
           - '0.2.0'
           - '0.2.1'
+          - '1.0.0'
+          - '1.0.1'
+          - '1.0.2'
+          - '1.0.3'
+          - '1.0.4'
 
 permissions:
   contents: read
@@ -23,7 +44,10 @@ concurrency:
 
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && inputs.fixture == 'drill-canary' &&
+      inputs.operation == 'publish' &&
+      contains(fromJSON('["0.1.0","0.1.1","0.1.2","0.2.0","0.2.1"]'), inputs.version)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: drill
@@ -49,3 +73,109 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_DRILL_TOKEN }}
         run: npm publish ./dist --access public --ignore-scripts --registry=https://registry.npmjs.org/
+
+  u7-provenance:
+    if: >-
+      github.repository == 'kovo-tests/supply-chain-drill' &&
+      github.ref == 'refs/heads/main' && inputs.fixture == 'u7-canary' &&
+      inputs.operation == 'publish' &&
+      contains(fromJSON('["1.0.0","1.0.1","1.0.2","1.0.3"]'), inputs.version)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: drill
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org/
+      - name: Pin npm
+        run: npm install --global npm@11.5.1 --ignore-scripts
+      - name: Validate existing fixtures
+        run: node scripts/validate-fixtures.mjs
+      - name: Prepare exact U7 version
+        working-directory: u7-canary
+        env:
+          DRILL_VERSION: ${{ inputs.version }}
+        run: |
+          test "$(npm pkg get name)" = '"@kovo-internal-testing/u7-canary"'
+          npm version "$DRILL_VERSION" --no-git-tag-version --ignore-scripts --allow-same-version
+          npm pack --dry-run --ignore-scripts
+      - name: Publish D-258 version
+        working-directory: u7-canary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DRILL_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          npm publish --access public --provenance --ignore-scripts --tag u7-drill --registry=https://registry.npmjs.org/
+
+  u7-unattested:
+    if: >-
+      github.repository == 'kovo-tests/supply-chain-drill' &&
+      github.ref == 'refs/heads/main' && inputs.fixture == 'u7-canary' &&
+      inputs.operation == 'publish' &&
+      contains(fromJSON('["1.0.4"]'), inputs.version)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: drill
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org/
+      - name: Pin npm
+        run: npm install --global npm@11.5.1 --ignore-scripts
+      - name: Validate existing fixtures
+        run: node scripts/validate-fixtures.mjs
+      - name: Prepare exact U7 version
+        working-directory: u7-canary
+        env:
+          DRILL_VERSION: ${{ inputs.version }}
+        run: |
+          test "$(npm pkg get name)" = '"@kovo-internal-testing/u7-canary"'
+          npm version "$DRILL_VERSION" --no-git-tag-version --ignore-scripts --allow-same-version
+          npm pack --dry-run --ignore-scripts
+      - name: Publish D-258 version
+        working-directory: u7-canary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DRILL_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'false'
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          npm publish --access public --provenance=false --ignore-scripts --tag u7-drill --registry=https://registry.npmjs.org/
+
+  u7-deprecate:
+    if: >-
+      github.repository == 'kovo-tests/supply-chain-drill' &&
+      github.ref == 'refs/heads/main' && inputs.fixture == 'u7-canary' &&
+      inputs.operation == 'deprecate' &&
+      contains(fromJSON('["1.0.0","1.0.1","1.0.2","1.0.3","1.0.4"]'), inputs.version)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: drill
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org/
+      - name: Pin npm
+        run: npm install --global npm@11.5.1 --ignore-scripts
+      - name: Deprecate only the approved U7 version
+        env:
+          DRILL_VERSION: ${{ inputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DRILL_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          npm deprecate "@kovo-internal-testing/u7-canary@$DRILL_VERSION" 'Synthetic U7 production drill complete' --registry=https://registry.npmjs.org/
