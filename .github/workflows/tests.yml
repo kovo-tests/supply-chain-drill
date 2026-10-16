@@ -26,3 +26,5 @@ jobs:
         run: node scripts/validate-fixtures.mjs
       - name: Inspect base package without lifecycle scripts
         run: npm pack ./packages/drill-canary --dry-run --ignore-scripts
+      - name: Inspect U7 package without lifecycle scripts
+        run: npm pack ./u7-canary --dry-run --ignore-scripts
