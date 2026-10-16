@@ -1,0 +1,14 @@
+{
+  "name": "@kovo-internal-testing/u7-canary",
+  "version": "1.0.0",
+  "description": "Kovo-owned synthetic U7 continuity drill fixture",
+  "type": "module",
+  "exports": "./index.js",
+  "files": ["index.js"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kovo-tests/supply-chain-drill.git"
+  },
+  "publishConfig": { "access": "public", "tag": "u7-drill" },
+  "license": "UNLICENSED"
+}
