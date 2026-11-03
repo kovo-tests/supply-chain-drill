@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@kovo-internal-testing/drill-canary": "0.1.0"
+    "@kovo-internal-testing/drill-canary": "0.1.1"
   }
 }
